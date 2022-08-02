@@ -8,6 +8,7 @@ Author: Joshua Hiller @ CrowdStrike
 Creation date: 03.23.21
 """
 
+
 import json
 import subprocess   # nosec
 # Import the needed Azure credential and management objects from the Azure SDK.
@@ -73,13 +74,15 @@ for group in list(group_list):
 
     # Print the resource totals for all resources in this group
     for resource_type, total in sorted(results.items()):
-        print("{} : {}".format(resource_type, total))
+        print(f"{resource_type} : {total}")
 
     # Print the totals for this resource group
-    print("\nTotal billable resources: {} \n\n".format(TOTAL_RESOURCES))
+    print(f"\nTotal billable resources: {TOTAL_RESOURCES} \n\n")
 
 # Print the grand totals for all resources discovered
-print("\nTotal billable resources discovered across all resource groups: {}\n\n".format(GRAND_TOTAL_RESOURCES))
+print(
+    f"\nTotal billable resources discovered across all resource groups: {GRAND_TOTAL_RESOURCES}\n\n"
+)
 
 #             ,ggg,                   gg                   ,ggg,
 #            d8P""8b                ,d88b,                d8""Y8b

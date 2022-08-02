@@ -18,15 +18,10 @@ def process(reg: str, svc: list) -> dict:
     # TODO: Implement paging for large resultsets       pylint: disable=W0511
     _ = boto3.client(svc[0], region_name=reg)
     delim = "=" if svc[3] else ""
-    return eval("_.{}({}{}{})".format(svc[2],           # nosec   pylint: disable=W0123
-                                      svc[3],
-                                      delim,
-                                      svc[4]
-                                      ))
+    return eval(f"_.{svc[2]}({svc[3]}{delim}{svc[4]})")
 
 
-aws_account = {}
-aws_account["totals"] = {}
+aws_account = {"totals": {}}
 filtered = []
 # filtered = ["us-west-2"]
 include = ["all"]
@@ -61,46 +56,46 @@ totals = {
             "ecs": 0,
             "eks": 0
 }
-GRAND_TOTAL_RESOURCES = 0
 ec2 = boto3.client("ec2")
 response = ec2.describe_regions()
 for region in response["Regions"]:
     RegionName = region["RegionName"]
-    if RegionName not in filtered:
-        if RegionName in include or "all" in include:
-            # Setup the branch
-            print(f"Processing {RegionName}")
-            aws_account[RegionName] = {}
-            aws_account["totals"][RegionName] = {}
+    if RegionName not in filtered and (
+        RegionName in include or "all" in include
+    ):
+        # Setup the branch
+        print(f"Processing {RegionName}")
+        aws_account[RegionName] = {}
+        aws_account["totals"][RegionName] = {}
             # Create the row for our output table
-            row = {}
-            row["region"] = RegionName
-            for service in checks:
-                # Process each service, adding the results to the aws_account object
-                aws_account[RegionName][service[5]] = process(RegionName, service)
-                # Calculate the number of elements found and throw it in the totals branch
-                aws_account["totals"][RegionName][service[5]] = len(aws_account[RegionName][service[5]][service[1]])
-                if service[5] not in ["iam"]:
-                    # Increment the number of elements found for the service in our grand total
-                    totals[service[5]] += aws_account["totals"][RegionName][service[5]]
-                else:
-                    # IAM roles are not region-specific, so just overwrite the previous value (it'll be the same)
-                    totals[service[5]] = aws_account["totals"][RegionName][service[5]]
+        row = {"region": RegionName}
+        for service in checks:
+            # Process each service, adding the results to the aws_account object
+            aws_account[RegionName][service[5]] = process(RegionName, service)
+            # Calculate the number of elements found and throw it in the totals branch
+            aws_account["totals"][RegionName][service[5]] = len(aws_account[RegionName][service[5]][service[1]])
+            if service[5] not in ["iam"]:
+                # Increment the number of elements found for the service in our grand total
+                totals[service[5]] += aws_account["totals"][RegionName][service[5]]
+            else:
+                # IAM roles are not region-specific, so just overwrite the previous value (it'll be the same)
+                totals[service[5]] = aws_account["totals"][RegionName][service[5]]
                 # Update the row with this service's totals
-                row.update(aws_account["totals"][RegionName])
-            # Add the row to our display table
-            data.append(row)
+            row |= aws_account["totals"][RegionName]
+        # Add the row to our display table
+        data.append(row)
 # Add in our grand totals to the display table
 data.append(totals)
-# Create GRAND_TOTAL_RESOURCE count for quoting
-for x in totals:
-    if totals[x] != 'TOTAL':
-        GRAND_TOTAL_RESOURCES += totals[x]
+GRAND_TOTAL_RESOURCES = sum(
+    totals[x] for x, value in totals.items() if value != 'TOTAL'
+)
 
 # Output our results
 print(tabulate(data, headers=headers, tablefmt="grid"))
 # Output GRAND_TOTAL_RESOURCE
-print("\nTotal billable resources discovered across all regions: {}\n\n".format(GRAND_TOTAL_RESOURCES))
+print(
+    f"\nTotal billable resources discovered across all regions: {GRAND_TOTAL_RESOURCES}\n\n"
+)
 
 #     .wwwwwwww.
 #   .w"  "WW"  "w.
